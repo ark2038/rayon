@@ -430,17 +430,15 @@ where
         // Find the first pair of out-of-order elements.
         let mut l = 0;
         let mut r = v.len();
-        unsafe {
             // Find the first element greater then or equal to the pivot.
-            while l < r && is_less(v.get_unchecked(l), pivot) {
+            while l < r && is_less(unsafe { v.get_unchecked(l) }, pivot) {
                 l += 1;
             }
 
             // Find the last element smaller that the pivot.
-            while l < r && !is_less(v.get_unchecked(r - 1), pivot) {
+            while l < r && !is_less(unsafe { v.get_unchecked(r - 1) }, pivot) {
                 r -= 1;
             }
-        }
 
         (
             l + partition_in_blocks(&mut v[l..r], pivot, is_less),
@@ -483,14 +481,13 @@ where
     let mut l = 0;
     let mut r = v.len();
     loop {
-        unsafe {
             // Find the first element greater that the pivot.
-            while l < r && !is_less(pivot, v.get_unchecked(l)) {
+            while l < r && !is_less(pivot, unsafe { v.get_unchecked(l) }) {
                 l += 1;
             }
 
             // Find the last element equal to the pivot.
-            while l < r && is_less(pivot, v.get_unchecked(r - 1)) {
+            while l < r && is_less(pivot, unsafe { v.get_unchecked(r - 1) }) {
                 r -= 1;
             }
 
@@ -501,9 +498,8 @@ where
 
             // Swap the found pair of out-of-order elements.
             r -= 1;
-            ptr::swap(v.get_unchecked_mut(l), v.get_unchecked_mut(r));
+            unsafe { ptr::swap(v.get_unchecked_mut(l), v.get_unchecked_mut(r)) };
             l += 1;
-        }
     }
 
     // We found `l` elements equal to the pivot. Add 1 to account for the pivot itself.
