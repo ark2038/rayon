@@ -54,17 +54,15 @@ impl<T: Send> IndexedParallelIterator for IntoIter<T> {
     {
         // The producer will move or drop each item from its slice, effectively taking ownership of
         // them.  When we're done, the vector only needs to free its buffer.
-        unsafe {
             // Make the vector forget about the actual items.
             let len = self.vec.len();
-            self.vec.set_len(0);
+            unsafe { self.vec.set_len(0) };
 
             // Get a correct borrow, then extend it to the original length.
             let mut slice = self.vec.as_mut_slice();
-            slice = std::slice::from_raw_parts_mut(slice.as_mut_ptr(), len);
+            unsafe { slice = std::slice::from_raw_parts_mut(slice.as_mut_ptr(), len) };
 
             callback.callback(VecProducer { slice: slice })
-        }
     }
 }
 

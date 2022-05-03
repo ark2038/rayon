@@ -260,7 +260,6 @@ pub fn scope<'scope, OP, R>(op: OP) -> R
     where OP: for<'s> FnOnce(&'s Scope<'scope>) -> R + 'scope + Send, R: Send,
 {
     in_worker(|owner_thread, _| {
-        unsafe {
             let scope: Scope<'scope> = Scope {
                 owner_thread_index: owner_thread.index(),
                 registry: owner_thread.registry().clone(),
@@ -268,10 +267,9 @@ pub fn scope<'scope, OP, R>(op: OP) -> R
                 job_completed_latch: CountLatch::new(),
                 marker: PhantomData,
             };
-            let result = scope.execute_job_closure(op);
-            scope.steal_till_jobs_complete(owner_thread);
+            let result = unsafe { scope.execute_job_closure(op) };
+            unsafe { scope.steal_till_jobs_complete(owner_thread) };
             result.unwrap() // only None if `op` panicked, and that would have been propagated
-        }
     })
 }
 
@@ -331,16 +329,14 @@ impl<'scope> Scope<'scope> {
     pub fn spawn<BODY>(&self, body: BODY)
         where BODY: FnOnce(&Scope<'scope>) + Send + 'scope
     {
-        unsafe {
             self.job_completed_latch.increment();
-            let job_ref = Box::new(HeapJob::new(move || self.execute_job(body)))
-                .as_job_ref();
+            let job_ref = unsafe { Box::new(HeapJob::new(move || self.execute_job(body)))
+                .as_job_ref() };
 
             // Since `Scope` implements `Sync`, we can't be sure
             // that we're still in a thread of this pool, so we
             // can't just push to the local worker thread.
             self.registry.inject_or_push(job_ref);
-        }
     }
 
     /// Executes `func` as a job, either aborting or executing as

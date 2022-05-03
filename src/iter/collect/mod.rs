@@ -95,20 +95,20 @@ impl<'c, T: Send + 'c> Collect<'c, T> {
 
     /// Update the final vector length.
     fn complete(self) {
+        // Here, we assert that `v` is fully initialized. This is
+        // checked by the following assert, which counts how many
+        // total writes occurred. Since we know that the consumer
+        // cannot have escaped from `drive` (by parametricity,
+        // essentially), we know that any stores that will happen,
+        // have happened. Unless some code is buggy, that means we
+        // should have seen `len` total writes.
+        let actual_writes = self.writes.load(Ordering::Relaxed);
+        assert!(actual_writes == self.len,
+                "expected {} total writes, but got {}",
+                self.len,
+                actual_writes);
+        let new_len = self.vec.len() + self.len;
         unsafe {
-            // Here, we assert that `v` is fully initialized. This is
-            // checked by the following assert, which counts how many
-            // total writes occurred. Since we know that the consumer
-            // cannot have escaped from `drive` (by parametricity,
-            // essentially), we know that any stores that will happen,
-            // have happened. Unless some code is buggy, that means we
-            // should have seen `len` total writes.
-            let actual_writes = self.writes.load(Ordering::Relaxed);
-            assert!(actual_writes == self.len,
-                    "expected {} total writes, but got {}",
-                    self.len,
-                    actual_writes);
-            let new_len = self.vec.len() + self.len;
             self.vec.set_len(new_len);
         }
     }

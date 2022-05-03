@@ -162,16 +162,14 @@ impl ThreadPool {
     /// [snt]: struct.ThreadPoolBuilder.html#method.num_threads
     #[inline]
     pub fn current_thread_index(&self) -> Option<usize> {
-        unsafe {
             let curr = WorkerThread::current();
             if curr.is_null() {
                 None
-            } else if (*curr).registry().id() != self.registry.id() {
+            } else if unsafe { (*curr).registry().id() != self.registry.id() }{
                 None
             } else {
-                Some((*curr).index())
+                unsafe { Some((*curr).index()) }
             }
-        }
     }
 
     /// Returns true if the current worker thread currently has "local
@@ -197,16 +195,14 @@ impl ThreadPool {
     /// [deque]: https://en.wikipedia.org/wiki/Double-ended_queue
     #[inline]
     pub fn current_thread_has_pending_tasks(&self) -> Option<bool> {
-        unsafe {
             let curr = WorkerThread::current();
             if curr.is_null() {
                 None
-            } else if (*curr).registry().id() != self.registry.id() {
+            } else if unsafe { (*curr).registry().id() != self.registry.id() }{
                 None
             } else {
-                Some(!(*curr).local_deque_is_empty())
+                unsafe { Some(!(*curr).local_deque_is_empty()) }
             }
-        }
     }
 
     /// Execute `oper_a` and `oper_b` in the thread-pool and return
@@ -289,12 +285,12 @@ impl fmt::Debug for ThreadPool {
 /// [snt]: struct.ThreadPoolBuilder.html#method.num_threads
 #[inline]
 pub fn current_thread_index() -> Option<usize> {
+    let curr = WorkerThread::current();
     unsafe {
-        let curr = WorkerThread::current();
         if curr.is_null() {
             None
         } else {
-            Some((*curr).index())
+            unsafe { Some((*curr).index()) }
         }
     }
 }
@@ -307,12 +303,12 @@ pub fn current_thread_index() -> Option<usize> {
 /// [m]: struct.ThreadPool.html#method.current_thread_has_pending_tasks
 #[inline]
 pub fn current_thread_has_pending_tasks() -> Option<bool> {
+    let curr = WorkerThread::current();
     unsafe {
-        let curr = WorkerThread::current();
         if curr.is_null() {
             None
         } else {
-            Some(!(*curr).local_deque_is_empty())
+            unsafe { Some(!(*curr).local_deque_is_empty()) }
         }
     }
 }

@@ -67,8 +67,8 @@ fn global_registry() -> &'static Arc<Registry> {
 pub fn init_global_registry(builder: ThreadPoolBuilder) -> Result<&'static Registry, ThreadPoolBuildError> {
     let mut called = false;
     let mut init_result = Ok(());;
-    THE_REGISTRY_SET.call_once(|| unsafe {
-        init_result = init_registry(builder);
+    THE_REGISTRY_SET.call_once(|| {
+        init_result = unsafe { init_registry(builder) };
         called = true;
     });
     if called {
@@ -148,13 +148,11 @@ impl Registry {
     }
 
     pub fn current() -> Arc<Registry> {
-        unsafe {
-            let worker_thread = WorkerThread::current();
-            if worker_thread.is_null() {
-                global_registry().clone()
-            } else {
-                (*worker_thread).registry.clone()
-            }
+        let worker_thread = WorkerThread::current();
+        if worker_thread.is_null() {
+            global_registry().clone()
+        } else {
+            unsafe { (*worker_thread).registry.clone() }
         }
     }
 
@@ -162,13 +160,11 @@ impl Registry {
     /// is better than `Registry::current().num_threads()` because it
     /// avoids incrementing the `Arc`.
     pub fn current_num_threads() -> usize {
-        unsafe {
-            let worker_thread = WorkerThread::current();
-            if worker_thread.is_null() {
-                global_registry().num_threads()
-            } else {
-                (*worker_thread).registry.num_threads()
-            }
+        let worker_thread = WorkerThread::current();
+        if worker_thread.is_null() {
+            global_registry().num_threads()
+        } else {
+            unsafe { (*worker_thread).registry.num_threads() }
         }
     }
 
@@ -328,8 +324,8 @@ impl Registry {
     pub fn in_worker<OP, R>(&self, op: OP) -> R
         where OP: FnOnce(&WorkerThread, bool) -> R + Send, R: Send
     {
+        let worker_thread = WorkerThread::current();
         unsafe {
-            let worker_thread = WorkerThread::current();
             if worker_thread.is_null() {
                 self.in_worker_cold(op)
             } else if (*worker_thread).registry().id() != self.id() {
@@ -704,8 +700,8 @@ unsafe fn main_loop(worker: Deque<JobRef>,
 pub fn in_worker<OP, R>(op: OP) -> R
     where OP: FnOnce(&WorkerThread, bool) -> R + Send, R: Send
 {
+    let owner_thread = WorkerThread::current();
     unsafe {
-        let owner_thread = WorkerThread::current();
         if !owner_thread.is_null() {
             // Perfectly valid to give them a `&T`: this is the
             // current thread, so we know the data structure won't be
